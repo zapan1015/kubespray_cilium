@@ -1,0 +1,70 @@
+# Vagrant
+.vagrant/
+*.box
+
+# VirtualBox
+*.vdi
+*.vmdk
+*.vbox
+*.vbox-prev
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# Ansible
+*.retry
+.ansible/
+
+# Kubespray
+kubespray/
+inventory/mycluster/artifacts/
+
+# SSH Keys
+*.pem
+*.key
+id_rsa*
+!id_rsa.pub.example
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# Kubernetes
+kubeconfig
+*.kubeconfig
+admin.conf
+
+# Terraform (if used)
+.terraform/
+*.tfstate
+*.tfstate.backup
+
+# Sensitive data
+secrets/
+*.secret
+credentials.yml
+
+# Temporary files
+tmp/
+temp/
+*.tmp
