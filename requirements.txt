@@ -1,0 +1,35 @@
+# Cilium Kubernetes Cluster Setup Dependencies
+# Core Ansible and automation tools
+ansible>=8.0.0,<9.0.0
+ansible-core>=2.15.0,<2.16.0
+
+# Template engine for configuration files
+jinja2>=3.1.0
+
+# YAML processing
+pyyaml>=6.0
+
+# HTTP requests for API calls
+requests>=2.28.0
+
+# Kubernetes Python client
+kubernetes>=25.0.0
+
+# Additional utilities
+netaddr>=0.8.0
+cryptography>=3.4.8
+paramiko>=2.11.0
+psutil>=5.9.0
+
+# Testing frameworks
+pytest>=7.0.0
+pytest-cov>=4.0.0
+pytest-mock>=3.10.0
+
+# Code quality
+flake8>=5.0.0
+black>=22.0.0
+
+# Documentation
+sphinx>=5.0.0
+sphinx-rtd-theme>=1.2.0

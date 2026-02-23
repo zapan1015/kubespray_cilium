@@ -8,14 +8,19 @@
 
 ## Tasks
 
-- [ ] 1. 프로젝트 구조 및 사전 요구사항 검증 설정
+- [x] 1. 프로젝트 구조 및 사전 요구사항 검증 설정
+
+
+
   - 프로젝트 디렉토리 구조 생성 (vagrant/, kubespray/, scripts/, manifests/)
   - Python 가상 환경 설정 및 의존성 패키지 설치 (ansible, jinja2, pyyaml)
   - 호스트 시스템 리소스 검증 스크립트 작성 (RAM, Disk, VirtualBox, Vagrant 버전 확인)
   - requirements.txt 파일 생성
   - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5_
 
-- [ ] 1.1 리소스 검증 로직에 대한 단위 테스트 작성
+- [x] 1.1 리소스 검증 로직에 대한 단위 테스트 작성
+
+
   - 리소스 부족 시나리오 테스트
   - VirtualBox/Vagrant 미설치 시나리오 테스트
   - _Requirements: 10.6_
