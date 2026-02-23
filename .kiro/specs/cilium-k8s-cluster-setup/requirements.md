@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This document specifies the requirements for deploying a Kubernetes 1.34.2 cluster with Cilium v1.16.5 CNI in a local environment using VirtualBox and Vagrant. The system shall provision a cluster consisting of 1 Master node and 2 Worker nodes, deploy Kubernetes using Kubespray, configure Cilium with advanced features including Hubble UI for real-time monitoring, Network Policy-based security, L7 protocol awareness, and WireGuard encryption.
+This document specifies the requirements for deploying a Kubernetes 1.35.1 cluster with Cilium v1.16.5 CNI in a local environment using VirtualBox and Vagrant. The system shall provision a cluster consisting of 1 Master node and 2 Worker nodes, deploy Kubernetes using Kubespray, configure Cilium with advanced features including Hubble UI for real-time monitoring, Network Policy-based security, L7 protocol awareness, and WireGuard encryption.
 
 The requirements are derived from the approved design document and cover infrastructure provisioning, cluster deployment, network configuration, security, observability, and monitoring capabilities. All requirements follow the EARS (Easy Approach to Requirements Syntax) pattern for clarity and testability.
 
@@ -46,7 +46,7 @@ The requirements are derived from the approved design document and cover infrast
 
 #### Acceptance Criteria
 
-1. WHEN the Cluster_Deployer receives inventory configuration, THE System SHALL deploy Kubernetes version 1.34.2
+1. WHEN the Cluster_Deployer receives inventory configuration, THE System SHALL deploy Kubernetes version 1.35.1
 2. THE Cluster_Deployer SHALL install etcd on the Master_Node
 3. THE Cluster_Deployer SHALL install kube-apiserver, kube-scheduler, and kube-controller-manager on the Master_Node
 4. THE Cluster_Deployer SHALL install kubelet on all nodes

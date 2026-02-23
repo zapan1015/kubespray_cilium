@@ -2,7 +2,7 @@
 
 ## Overview
 
-이 문서는 VirtualBox와 Vagrant를 사용하여 로컬 환경에 Kubernetes 1.34.2 클러스터를 구축하고, Cilium v1.16.5를 네트워크 플러그인으로 설정하는 전체 시스템 설계를 다룹니다. 클러스터는 1개의 Master 노드와 2개의 Worker 노드로 구성되며, Kubespray를 통해 자동 배포됩니다. Cilium은 eBPF 기반의 고성능 네트워킹, 보안, 관찰성을 제공하며, Hubble UI를 통한 실시간 모니터링, Network Policy 기반 보안, L7 프로토콜 인식, WireGuard 암호화 등의 고급 기능을 지원합니다.
+이 문서는 VirtualBox와 Vagrant를 사용하여 로컬 환경에 Kubernetes 1.35.1 클러스터를 구축하고, Cilium v1.16.5를 네트워크 플러그인으로 설정하는 전체 시스템 설계를 다룹니다. 클러스터는 1개의 Master 노드와 2개의 Worker 노드로 구성되며, Kubespray를 통해 자동 배포됩니다. Cilium은 eBPF 기반의 고성능 네트워킹, 보안, 관찰성을 제공하며, Hubble UI를 통한 실시간 모니터링, Network Policy 기반 보안, L7 프로토콜 인식, WireGuard 암호화 등의 고급 기능을 지원합니다.
 
 이 설계는 인프라 프로비저닝부터 클러스터 배포, 네트워크 설정, 모니터링 구성까지 전체 라이프사이클을 포괄하며, 재현 가능하고 자동화된 배포 프로세스를 제공합니다. 모든 구성 요소는 코드형 인프라(Infrastructure as Code) 원칙을 따르며, 버전 관리가 가능하도록 설계되었습니다.
 
@@ -153,7 +153,7 @@ sequenceDiagram
 ```ruby
 # Vagrantfile API
 Vagrant.configure("2") do |config|
-  config.vm.box = "ubuntu/jammy64"  # Ubuntu 22.04
+  config.vm.box = "cloud-image/ubuntu-24.04"  # Ubuntu 24.04 LTS
   config.vm.network "private_network", ip: String
   config.vm.provider "virtualbox" do |vb|
     vb.memory = Integer
@@ -204,7 +204,7 @@ all:
 ```
 
 **Responsibilities**:
-- Kubernetes v1.34.2 바이너리 배포
+- Kubernetes v1.35.1 바이너리 배포
 - etcd 클러스터 구성 (단일 노드)
 - kube-apiserver, kube-scheduler, kube-controller-manager 설치
 - kubelet 및 kube-proxy 구성
@@ -365,7 +365,7 @@ data:
 ```yaml
 VMConfig:
   name: string                    # VM 이름 (master, worker-1, worker-2)
-  box: string                     # Vagrant box 이름 (ubuntu/jammy64)
+  box: string                     # Vagrant box 이름 (cloud-image/ubuntu-24.04)
   ip: string                      # IP 주소 (192.168.56.x)
   memory: integer                 # RAM 크기 (MB)
   cpus: integer                   # CPU 코어 수
@@ -383,7 +383,7 @@ VMConfig:
 
 ```yaml
 K8sCluster:
-  version: string                 # Kubernetes 버전 (1.34.2)
+  version: string                 # Kubernetes 버전 (1.35.1)
   cluster_name: string            # 클러스터 이름
   kube_network_plugin: string     # CNI 플러그인 (cilium)
   kube_pods_subnet: string        # Pod CIDR (10.244.0.0/16)

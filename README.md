@@ -1,13 +1,13 @@
 # Cilium Kubernetes Cluster Setup
 
-VirtualBox와 Vagrant를 사용하여 로컬 환경에 Kubernetes 1.34.2 클러스터를 구축하고, Cilium v1.16.5를 네트워크 플러그인으로 설정하는 자동화 프로젝트입니다.
+VirtualBox와 Vagrant를 사용하여 로컬 환경에 Kubernetes 1.35.1 클러스터를 구축하고, Cilium v1.16.5를 네트워크 플러그인으로 설정하는 자동화 프로젝트입니다.
 
 ## 개요
 
 이 프로젝트는 다음을 제공합니다:
 
 - **인프라**: VirtualBox + Vagrant를 통한 VM 자동 프로비저닝 (1 Master + 2 Worker 노드)
-- **Kubernetes**: Kubespray를 통한 Kubernetes 1.34.2 클러스터 자동 배포
+- **Kubernetes**: Kubespray를 통한 Kubernetes 1.35.1 클러스터 자동 배포
 - **네트워킹**: Cilium v1.16.5 CNI 플러그인 (eBPF 기반)
 - **보안**: Network Policy 기반 보안, WireGuard 암호화
 - **관찰성**: Hubble UI를 통한 실시간 네트워크 플로우 모니터링
@@ -154,7 +154,8 @@ kubespray_cilium/
 
 \agrant/Vagrantfile\에서 메모리 및 CPU 설정 수정:
 
-\\\uby
+\\\
+uby
 vb.memory = "4096"  # Master 노드 RAM
 vb.cpus = 2         # Master 노드 CPU
 \\\
@@ -352,7 +353,7 @@ zapan1015
 
 ## 버전
 
-- **Kubernetes**: 1.34.2
+- **Kubernetes**: 1.35.1
 - **Cilium**: 1.16.5
-- **Kubespray**: 2.26
-- **Ubuntu**: 22.04 LTS (Jammy Jellyfish)
+- **Kubespray**: 2.26.0
+- **Ubuntu**: 24.04 LTS (Noble Numbat)
