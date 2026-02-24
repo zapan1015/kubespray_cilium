@@ -68,3 +68,17 @@ credentials.yml
 tmp/
 temp/
 *.tmp
+
+# Kiro settings (may contain tokens, credentials, etc.)
+.kiro/settings/
+.kiro/cache/
+.kiro/logs/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Personal access tokens
+*.token
+token.txt
