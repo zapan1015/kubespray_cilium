@@ -1,0 +1,60 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  # Ubuntu 22.04 LTS (Jammy Jellyfish)
+  config.vm.box = "ubuntu/jammy64"
+  config.vm.box_version = "20240821.0.0"
+
+  # 공통 설정
+  config.vm.provider "virtualbox" do |vb|
+    vb.gui = false
+    vb.customize ["modifyvm", :id, "--nested-hw-virt", "on"]
+    vb.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+    vb.customize ["modifyvm", :id, "--natdnsproxy1", "on"]
+  end
+
+  # Master Node (Control Plane)
+  config.vm.define "master" do |master|
+    master.vm.hostname = "k8s-master"
+    master.vm.network "private_network", ip: "192.168.56.10"
+    
+    master.vm.provider "virtualbox" do |vb|
+      vb.name = "k8s-master"
+      vb.memory = "4096"
+      vb.cpus = 2
+    end
+
+    # Port forwarding for API server and Hubble UI
+    master.vm.network "forwarded_port", guest: 6443, host: 6443, host_ip: "127.0.0.1"
+    master.vm.network "forwarded_port", guest: 8080, host: 8080, host_ip: "127.0.0.1"
+    master.vm.network "forwarded_port", guest: 31234, host: 31234, host_ip: "127.0.0.1"
+  end
+
+  # Worker Node 1
+  config.vm.define "worker-1" do |worker|
+    worker.vm.hostname = "k8s-worker-1"
+    worker.vm.network "private_network", ip: "192.168.56.11"
+    
+    worker.vm.provider "virtualbox" do |vb|
+      vb.name = "k8s-worker-1"
+      vb.memory = "3072"
+      vb.cpus = 2
+    end
+  end
+
+  # Worker Node 2
+  config.vm.define "worker-2" do |worker|
+    worker.vm.hostname = "k8s-worker-2"
+    worker.vm.network "private_network", ip: "192.168.56.12"
+    
+    worker.vm.provider "virtualbox" do |vb|
+      vb.name = "k8s-worker-2"
+      vb.memory = "3072"
+      vb.cpus = 2
+    end
+  end
+
+  # 모든 노드에 공통 프로비저닝
+  config.vm.provision "shell", path: "provision.sh"
+end

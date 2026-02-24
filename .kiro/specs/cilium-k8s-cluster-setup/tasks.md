@@ -26,13 +26,13 @@
   - _Requirements: 10.6_
 
 - [ ] 2. Vagrantfile 및 VM 프로비저닝 스크립트 구현
-  - [ ] 2.1 Vagrantfile 생성 및 VM 구성 정의
+  - [x] 2.1 Vagrantfile 생성 및 VM 구성 정의
     - Master 노드 정의 (192.168.56.10, 4GB RAM, 2 CPU)
     - Worker 노드 2개 정의 (192.168.56.11-12, 3GB RAM, 2 CPU)
     - Host-only 네트워크 어댑터 구성 (192.168.56.0/24)
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6_
 
-  - [ ] 2.2 VM 프로비저닝 셸 스크립트 작성
+  - [x] 2.2 VM 프로비저닝 셸 스크립트 작성
     - 기본 패키지 설치 (Docker, containerd, kubeadm 의존성)
     - SSH 키 배포 및 호스트명 설정
     - /etc/hosts 파일 구성
