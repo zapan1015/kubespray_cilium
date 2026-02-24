@@ -25,7 +25,7 @@
   - VirtualBox/Vagrant 미설치 시나리오 테스트
   - _Requirements: 10.6_
 
-- [ ] 2. Vagrantfile 및 VM 프로비저닝 스크립트 구현
+- [x] 2. Vagrantfile 및 VM 프로비저닝 스크립트 구현
   - [x] 2.1 Vagrantfile 생성 및 VM 구성 정의
     - Master 노드 정의 (192.168.56.10, 4GB RAM, 2 CPU)
     - Worker 노드 2개 정의 (192.168.56.11-12, 3GB RAM, 2 CPU)
@@ -38,12 +38,12 @@
     - /etc/hosts 파일 구성
     - _Requirements: 1.8_
 
-  - [ ] 2.3 Python 스크립트로 VM 생성 자동화
+  - [x] 2.3 Python 스크립트로 VM 생성 자동화
     - `vagrant up` 명령 실행 및 출력 모니터링
     - VM 상태 확인 및 네트워크 연결성 검증
     - _Requirements: 1.7, 11.1, 11.6_
 
-- [ ] 2.4 VM 프로비저닝 검증 테스트 작성
+- [x] 2.4 VM 프로비저닝 검증 테스트 작성
   - 모든 VM이 실행 중인지 확인
   - 네트워크 연결성 테스트 (ping 테스트)
   - SSH 접근 가능 여부 확인
@@ -52,31 +52,31 @@
 - [ ] 3. Checkpoint - VM 인프라 검증
   - Ensure all VMs are running and accessible, ask the user if questions arise.
 
-- [ ] 4. Kubespray 인벤토리 및 구성 파일 생성
-  - [ ] 4.1 Kubespray 저장소 클론 및 설정
+- [x] 4. Kubespray 인벤토리 및 구성 파일 생성
+  - [x] 4.1 Kubespray 저장소 클론 및 설정
     - Kubespray 저장소 클론 (특정 버전 태그)
     - Python 의존성 설치 (requirements.txt)
     - _Requirements: 2.1, 9.2_
 
-  - [ ] 4.2 인벤토리 파일 생성 (hosts.yaml)
+  - [x] 4.2 인벤토리 파일 생성 (hosts.yaml)
     - Jinja2 템플릿을 사용한 인벤토리 파일 생성
     - Master 노드를 kube_control_plane 및 etcd 그룹에 할당
     - Worker 노드를 kube_node 그룹에 할당
     - _Requirements: 2.2, 2.3, 2.5_
 
-  - [ ] 4.3 클러스터 구성 파일 생성 (k8s-cluster.yml)
+  - [x] 4.3 클러스터 구성 파일 생성 (k8s-cluster.yml)
     - Kubernetes 버전 1.35.1 설정
     - CNI 플러그인을 cilium으로 설정
     - Pod CIDR (10.244.0.0/16) 및 Service CIDR (10.96.0.0/12) 설정
     - Container runtime을 containerd로 설정
     - _Requirements: 2.1, 3.4, 3.5_
 
-  - [ ] 4.4 애드온 구성 파일 생성 (addons.yml)
+  - [x] 4.4 애드온 구성 파일 생성 (addons.yml)
     - Metrics Server 활성화
     - Helm 설치 활성화
     - _Requirements: 9.2_
 
-- [ ] 4.5 구성 파일 검증 테스트 작성
+- [x] 4.5 구성 파일 검증 테스트 작성
   - YAML 구문 검증
   - 필수 필드 존재 여부 확인
   - IP 주소 및 CIDR 형식 검증

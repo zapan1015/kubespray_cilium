@@ -1,0 +1,172 @@
+---
+# Kubespray Cluster Configuration for Cilium Kubernetes Cluster
+# Generated from Jinja2 template
+# 
+# Cluster Specifications:
+#   - Kubernetes Version: {{ kube_version }}
+#   - CNI Plugin: {{ kube_network_plugin }}
+#   - Pod CIDR: {{ kube_pods_subnet }}
+#   - Service CIDR: {{ kube_service_addresses }}
+#   - Container Runtime: {{ container_manager }}
+
+# Kubernetes configuration dirs and system namespace.
+kube_config_dir: /etc/kubernetes
+kube_script_dir: "{{ '{{' }} bin_dir {{ '}}' }}/kubernetes-scripts"
+kube_manifest_dir: "{{ '{{' }} kube_config_dir {{ '}}' }}/manifests"
+
+# This is where all the cert scripts and certs will be located
+kube_cert_dir: "{{ '{{' }} kube_config_dir {{ '}}' }}/ssl"
+
+# This is where all of the bearer tokens will be stored
+kube_token_dir: "{{ '{{' }} kube_config_dir {{ '}}' }}/tokens"
+
+kube_api_anonymous_auth: true
+
+## Kubernetes version
+kube_version: {{ kube_version }}
+
+# Where the binaries will be downloaded.
+local_release_dir: "/tmp/releases"
+retry_stagger: 5
+
+# This is the user that owns the cluster installation.
+kube_owner: kube
+
+# This is the group that the cert creation scripts chgrp the cert files to.
+kube_cert_group: kube-cert
+
+# Cluster Loglevel configuration
+kube_log_level: 2
+
+# Directory where credentials will be stored
+credentials_dir: "{{ '{{' }} inventory_dir {{ '}}' }}/credentials"
+
+# Choose network plugin (cilium, calico, kube-ovn, weave or flannel)
+kube_network_plugin: {{ kube_network_plugin }}
+
+# Setting multi_networking to true will install Multus
+kube_network_plugin_multus: false
+
+# Kubernetes internal network for services
+kube_service_addresses: {{ kube_service_addresses }}
+
+# Internal network for pods
+# This network must be unused in your network infrastructure!
+kube_pods_subnet: {{ kube_pods_subnet }}
+
+# Internal network node size allocation
+# This is the size allocated to each node for pod IP address allocation
+kube_network_node_prefix: 24
+
+# Configure Dual Stack networking (i.e. both IPv4 and IPv6)
+enable_dual_stack_networks: false
+
+# The port the API Server will be listening on
+kube_apiserver_ip: "{{ '{{' }} kube_service_addresses | ansible.utils.ipaddr('net') | ansible.utils.ipaddr(1) | ansible.utils.ipaddr('address') {{ '}}' }}"
+kube_apiserver_port: 6443
+
+# Kube-proxy proxyMode configuration
+# Note: When using Cilium with kube-proxy replacement, this may be overridden
+kube_proxy_mode: ipvs
+
+# Configure arp_ignore and arp_announce
+kube_proxy_strict_arp: false
+
+# Kube-proxy nodeport addresses
+kube_proxy_nodeport_addresses: []
+
+## Encrypting Secret Data at Rest
+kube_encrypt_secret_data: false
+
+# DNS configuration
+cluster_name: cluster.local
+ndots: 2
+dns_mode: coredns
+enable_nodelocaldns: true
+enable_nodelocaldns_secondary: false
+nodelocaldns_ip: 169.254.25.10
+nodelocaldns_health_port: 9254
+nodelocaldns_second_health_port: 9256
+nodelocaldns_bind_metrics_host_ip: false
+nodelocaldns_secondary_skew_seconds: 5
+
+# Enable k8s_external plugin for CoreDNS
+enable_coredns_k8s_external: false
+coredns_k8s_external_zone: k8s_external.local
+
+# Enable endpoint_pod_names option for kubernetes plugin
+enable_coredns_k8s_endpoint_pod_names: false
+
+# DNS resolution mode
+resolvconf_mode: host_resolvconf
+
+# Deploy netchecker app to verify DNS resolve
+deploy_netchecker: false
+
+# Ip address of the kubernetes skydns service
+skydns_server: "{{ '{{' }} kube_service_addresses | ansible.utils.ipaddr('net') | ansible.utils.ipaddr(3) | ansible.utils.ipaddr('address') {{ '}}' }}"
+skydns_server_secondary: "{{ '{{' }} kube_service_addresses | ansible.utils.ipaddr('net') | ansible.utils.ipaddr(4) | ansible.utils.ipaddr('address') {{ '}}' }}"
+dns_domain: "{{ '{{' }} cluster_name {{ '}}' }}"
+
+## Container runtime
+## docker for docker, crio for cri-o and containerd for containerd.
+container_manager: {{ container_manager }}
+
+# Additional container runtimes
+kata_containers_enabled: false
+
+kubeadm_certificate_key: "{{ '{{' }} lookup('password', credentials_dir + '/kubeadm_certificate_key.creds length=64 chars=hexdigits') | lower {{ '}}' }}"
+
+# K8s image pull policy
+k8s_image_pull_policy: IfNotPresent
+
+# Audit log for kubernetes
+kubernetes_audit: false
+
+# Define kubelet config dir for dynamic kubelet
+default_kubelet_config_dir: "{{ '{{' }} kube_config_dir {{ '}}' }}/dynamic_kubelet_dir"
+
+# Make a copy of kubeconfig on the host that runs Ansible
+# kubeconfig_localhost: false
+
+# Download kubectl onto the host that runs Ansible
+# kubectl_localhost: false
+
+# Whether to run kubelet and container-engine daemons in a dedicated cgroup
+# kube_reserved: false
+
+# Optionally reserve resources for OS system daemons
+# system_reserved: true
+
+# An alternative flexvolume plugin directory
+# kubelet_flexvolumes_plugins_dir: /usr/libexec/kubernetes/kubelet-plugins/volume/exec
+
+# Running on top of openstack vms with cinder enabled
+volume_cross_zone_attachment: false
+
+# Add Persistent Volumes Storage Class
+persistent_volumes_enabled: false
+
+# Container Engine Acceleration
+# nvidia_accelerator_enabled: false
+
+# Support tls min version
+# tls_min_version: ""
+
+# Support tls cipher suites
+# tls_cipher_suites: {}
+
+# Amount of time to retain events
+event_ttl_duration: "1h0m0s"
+
+# Automatically renew K8S control plane certificates
+auto_renew_certificates: false
+
+# kubeadm patches
+kubeadm_patches:
+  enabled: false
+  source_dir: "{{ '{{' }} inventory_dir {{ '}}' }}/patches"
+  dest_dir: "{{ '{{' }} kube_config_dir {{ '}}' }}/patches"
+
+# Remove the role binding to anonymous users created by kubeadm
+remove_anonymous_access: false

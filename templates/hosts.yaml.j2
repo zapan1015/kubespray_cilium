@@ -1,0 +1,44 @@
+# Kubespray Inventory File for Cilium Kubernetes Cluster
+# Generated from Jinja2 template
+# Cluster Configuration:
+#   - 1 Master node (control plane + etcd)
+#   - 2 Worker nodes
+#   - Network: 192.168.56.0/24
+
+all:
+  hosts:
+{% for node in nodes %}
+    {{ node.name }}:
+      ansible_host: {{ node.ip }}
+      ip: {{ node.ip }}
+      access_ip: {{ node.ip }}
+{% if node.role == 'master' %}
+      etcd_member_name: etcd1
+{% endif %}
+{% endfor %}
+  children:
+    kube_control_plane:
+      hosts:
+{% for node in nodes %}
+{% if node.role == 'master' %}
+        {{ node.name }}:
+{% endif %}
+{% endfor %}
+    kube_node:
+      hosts:
+{% for node in nodes %}
+        {{ node.name }}:
+{% endfor %}
+    etcd:
+      hosts:
+{% for node in nodes %}
+{% if node.role == 'master' %}
+        {{ node.name }}:
+{% endif %}
+{% endfor %}
+    k8s_cluster:
+      children:
+        kube_control_plane:
+        kube_node:
+    calico_rr:
+      hosts: {}

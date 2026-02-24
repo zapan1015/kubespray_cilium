@@ -1,0 +1,60 @@
+---
+# Kubespray Addons Configuration for Cilium Kubernetes Cluster
+# Generated from Jinja2 template
+# 
+# Enabled Addons:
+#   - Metrics Server: {{ metrics_server_enabled }}
+#   - Helm: {{ helm_enabled }}
+
+# Metrics Server
+# Metrics Server collects resource metrics from Kubelets and exposes them in Kubernetes apiserver
+# through Metrics API for use by Horizontal Pod Autoscaler and Vertical Pod Autoscaler.
+metrics_server_enabled: {{ metrics_server_enabled }}
+metrics_server_container_port: 10250
+metrics_server_kubelet_insecure_tls: true
+metrics_server_metric_resolution: 15s
+metrics_server_kubelet_preferred_address_types: "InternalIP,ExternalIP,Hostname"
+
+# Helm deployment
+# Helm is a package manager for Kubernetes that allows developers and operators to more easily
+# package, configure, and deploy applications and services onto Kubernetes clusters.
+helm_enabled: {{ helm_enabled }}
+helm_version: v3.16.3
+helm_skip_refresh: false
+
+# Registry deployment
+registry_enabled: false
+
+# Local volume provisioner deployment
+local_volume_provisioner_enabled: false
+local_volume_provisioner_namespace: kube-system
+local_volume_provisioner_storage_classes:
+  local-storage:
+    host_dir: /mnt/disks
+    mount_dir: /mnt/disks
+    volume_mode: Filesystem
+    fs_type: ext4
+
+# CephFS provisioner deployment
+cephfs_provisioner_enabled: false
+
+# RBD provisioner deployment
+rbd_provisioner_enabled: false
+
+# Nginx ingress controller deployment
+ingress_nginx_enabled: false
+
+# ALB ingress controller deployment
+ingress_alb_enabled: false
+
+# Cert manager deployment
+cert_manager_enabled: false
+
+# MetalLB deployment
+metallb_enabled: false
+
+# Argocd deployment
+argocd_enabled: false
+
+# Krew plugins manager
+krew_enabled: false
