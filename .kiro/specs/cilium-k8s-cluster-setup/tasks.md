@@ -83,19 +83,19 @@
   - _Requirements: 9.6, 9.7_
 
 - [ ] 5. Kubernetes 클러스터 배포 실행
-  - [ ] 5.1 Ansible 플레이북 실행 스크립트 작성
+  - [x] 5.1 Ansible 플레이북 실행 스크립트 작성
     - `ansible-playbook cluster.yml` 실행 및 출력 로깅
     - 배포 진행 상황 모니터링
     - 오류 발생 시 로그 보존 및 보고
     - _Requirements: 2.1, 2.4, 11.2, 11.4_
 
-  - [ ] 5.2 클러스터 배포 후 검증 스크립트 작성
+  - [x] 5.2 클러스터 배포 후 검증 스크립트 작성
     - kubectl 설정 및 클러스터 접근 확인
     - 모든 노드가 Ready 상태인지 확인
     - 시스템 파드가 Running 상태인지 확인
     - _Requirements: 2.8, 8.1, 8.2_
 
-  - [ ] 5.3 kubeconfig 파일 복사 및 환경 변수 설정
+  - [x] 5.3 kubeconfig 파일 복사 및 환경 변수 설정
     - Master 노드에서 kubeconfig 파일 복사
     - KUBECONFIG 환경 변수 설정
     - _Requirements: 2.7_
