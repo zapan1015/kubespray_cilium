@@ -34,8 +34,8 @@ pip3 install --upgrade pip -q
 
 # SSH 설정
 echo "[4/7] Configuring SSH..."
-sed -i ''s/#PasswordAuthentication yes/PasswordAuthentication yes/g'' /etc/ssh/sshd_config
-sed -i ''s/PasswordAuthentication no/PasswordAuthentication yes/g'' /etc/ssh/sshd_config
+sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
 systemctl restart ssh
 
 # 호스트 파일 설정
@@ -72,7 +72,7 @@ sysctl --system > /dev/null 2>&1
 # Swap 비활성화 (Kubernetes 요구사항)
 echo "Disabling swap..."
 swapoff -a
-sed -i ''/ swap / s/^\(.*\)$/#\1/g'' /etc/fstab
+sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
 
 echo "========================================="
 echo "VM Provisioning completed successfully!"
