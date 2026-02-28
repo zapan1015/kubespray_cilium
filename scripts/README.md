@@ -19,7 +19,8 @@
 - `generate_addons_config.py` - 애드온 구성 파일 생성
 
 ### 클러스터 배포
-- `deploy_cluster.py` - Ansible 플레이북 실행 및 Kubernetes 클러스터 배포
+- `deploy_cluster.py` - Ansible 플레이북 실행 및 Kubernetes 클러스터 배포 (Windows에서 직접 실행)
+- `deploy_on_master.py` - Master VM을 통한 클러스터 배포 (Windows 환경 권장) - [상세 문서](DEPLOY_ON_MASTER.md)
 - `install_cilium.py` - Cilium CNI 설치 및 구성 (예정)
 
 ### 모니터링 및 검증
@@ -27,6 +28,22 @@
 - `setup_monitoring.py` - Prometheus/Grafana 모니터링 스택 설정 (예정)
 
 ## 사용법
+
+### 배포 방법 선택
+
+클러스터 배포를 위해 두 가지 방법 중 하나를 선택할 수 있습니다:
+
+#### 옵션 1: Master VM을 통한 배포 (권장 - Windows)
+- **스크립트**: `deploy_on_master.py`
+- **장점**: Windows에서 Ansible 제한 사항 우회, 더 안정적
+- **방법**: Master VM(Linux)에서 Ansible 실행
+- **상세 문서**: [DEPLOY_ON_MASTER.md](DEPLOY_ON_MASTER.md)
+
+#### 옵션 2: 직접 배포 (Linux/WSL)
+- **스크립트**: `deploy_cluster.py`
+- **장점**: 설정이 간단함
+- **방법**: Windows 호스트에서 직접 Ansible 실행
+- **제한사항**: Windows에서 Ansible 지원 제한적
 
 ### 1. 환경 설정
 ```bash
@@ -58,7 +75,14 @@ vagrant up
 cd ..
 
 # Kubernetes 클러스터 배포
+# 옵션 1: Master VM을 통한 배포 (Windows 환경 권장)
+python scripts/deploy_on_master.py
+
+# 옵션 2: 직접 배포 (Linux/WSL 환경)
 python scripts/deploy_cluster.py
+
+# kubeconfig 설정
+python scripts/setup_kubeconfig.py
 
 # Cilium 설치
 python scripts/install_cilium.py
