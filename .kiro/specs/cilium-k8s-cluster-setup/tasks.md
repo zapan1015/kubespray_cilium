@@ -82,7 +82,7 @@
   - IP 주소 및 CIDR 형식 검증
   - _Requirements: 9.6, 9.7_
 
-- [ ] 5. Kubernetes 클러스터 배포 실행
+- [x] 5. Kubernetes 클러스터 배포 실행
   - [x] 5.1 Ansible 플레이북 실행 스크립트 작성
     - `ansible-playbook cluster.yml` 실행 및 출력 로깅
     - 배포 진행 상황 모니터링
@@ -100,7 +100,7 @@
     - KUBECONFIG 환경 변수 설정
     - _Requirements: 2.7_
 
-- [ ] 5.4 클러스터 배포 검증 테스트 작성
+- [x] 5.4 클러스터 배포 검증 테스트 작성
   - 노드 상태 확인 테스트
   - API 서버 접근 가능 여부 테스트
   - 인증서 유효성 검증
