@@ -28,7 +28,7 @@ All requirements follow the EARS (Easy Approach to Requirements Syntax) pattern 
 #### Acceptance Criteria
 
 1. WHEN the Infrastructure_Provisioner receives VM configuration, THE System SHALL create three virtual machines running Ubuntu 24.04 LTS
-2. THE Infrastructure_Provisioner SHALL use the "bento/ubuntu-24.04" Vagrant box
+2. THE Infrastructure_Provisioner SHALL use the "alvistack/ubuntu-24.04" Vagrant box version "20260108.1.1"
 3. THE Infrastructure_Provisioner SHALL configure the Master_Node with 4GB RAM and 2 CPU cores
 4. THE Infrastructure_Provisioner SHALL configure each Worker_Node with 3GB RAM and 2 CPU cores
 5. THE Infrastructure_Provisioner SHALL assign IP address 192.168.56.10 to the Master_Node

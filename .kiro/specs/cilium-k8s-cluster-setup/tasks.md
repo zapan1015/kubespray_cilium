@@ -31,7 +31,7 @@
 
 - [ ] 2. Vagrantfile 및 VM 프로비저닝 구현
   - [ ] 2.1 Vagrantfile 생성
-    - Ubuntu 24.04 box 설정 (bento/ubuntu-24.04)
+    - Ubuntu 24.04 box 설정 (alvistack/ubuntu-24.04 버전 20260108.1.1)
     - Master 노드 정의 (192.168.56.10, 4GB RAM, 2 CPU)
     - Worker 노드 2개 정의 (192.168.56.11-12, 3GB RAM, 2 CPU)
     - Private network 구성 (192.168.56.0/24)

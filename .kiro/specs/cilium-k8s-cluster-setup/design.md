@@ -114,7 +114,8 @@ sequenceDiagram
 ```ruby
 # Vagrantfile API
 Vagrant.configure("2") do |config|
-  config.vm.box = "bento/ubuntu-24.04"
+  config.vm.box = "alvistack/ubuntu-24.04"
+  config.vm.box_version = "20260108.1.1"
   config.vm.network "private_network", ip: String
   config.vm.provider "virtualbox" do |vb|
     vb.memory = Integer
@@ -252,7 +253,8 @@ spec:
 ```yaml
 VMConfig:
   name: string                    # VM 이름
-  box: string                     # bento/ubuntu-24.04
+  box: string                     # alvistack/ubuntu-24.04
+  box_version: string             # 20260108.1.1
   ip: string                      # 192.168.56.x
   memory: integer                 # RAM (MB)
   cpus: integer                   # CPU 코어 수
