@@ -2,9 +2,9 @@
 
 ## Overview
 
-이 문서는 VirtualBox와 Vagrant를 사용하여 로컬 환경에 Kubernetes 1.35.1 클러스터를 구축하고, Cilium v1.16.5를 네트워크 플러그인으로 설정하는 전체 시스템 설계를 다룹니다. 클러스터는 1개의 Master 노드와 2개의 Worker 노드로 구성되며, Kubespray를 통해 자동 배포됩니다. Cilium은 eBPF 기반의 고성능 네트워킹, 보안, 관찰성을 제공하며, Hubble UI를 통한 실시간 모니터링, Network Policy 기반 보안, L7 프로토콜 인식, WireGuard 암호화 등의 고급 기능을 지원합니다.
+이 문서는 Vagrant와 VirtualBox를 사용하여 Ubuntu 24.04 기반의 Kubernetes 1.35.1 클러스터를 구축하고, Cilium 1.18.6을 CNI 플러그인으로 설정하는 시스템 설계를 다룹니다. 클러스터는 1개의 Master 노드와 2개의 Worker 노드로 구성되며, Kubespray를 Master 노드에서 직접 실행하여 전체 클러스터를 자동 배포합니다.
 
-이 설계는 인프라 프로비저닝부터 클러스터 배포, 네트워크 설정, 모니터링 구성까지 전체 라이프사이클을 포괄하며, 재현 가능하고 자동화된 배포 프로세스를 제공합니다. 모든 구성 요소는 코드형 인프라(Infrastructure as Code) 원칙을 따르며, 버전 관리가 가능하도록 설계되었습니다.
+이 설계의 핵심 특징은 Master 노드가 Ansible 컨트롤러 역할을 겸하여 자기 자신과 Worker 노드들을 프로비저닝한다는 점입니다. 이는 외부 의존성을 최소화하고 클러스터 내부에서 완전한 자동화를 가능하게 합니다.
 
 ## Architecture
 
@@ -19,6 +19,7 @@ graph TB
     
     subgraph "Virtual Network - 192.168.56.0/24"
         subgraph "Master Node - 192.168.56.10"
+            KUBESPRAY[Kubespray/Ansible]
             API[kube-apiserver]
             SCHED[kube-scheduler]
             CM[kube-controller-manager]
@@ -41,8 +42,6 @@ graph TB
         subgraph "Monitoring Stack"
             HUBBLE[Hubble Relay]
             HUBBLE_UI[Hubble UI]
-            PROM[Prometheus]
-            GRAF[Grafana]
         end
     end
     
@@ -50,6 +49,11 @@ graph TB
     VB -->|Creates VMs| Master
     VB -->|Creates VMs| Worker1
     VB -->|Creates VMs| Worker2
+    
+    KUBESPRAY -->|Installs K8s| API
+    KUBESPRAY -->|Installs K8s| KUBELET1
+    KUBESPRAY -->|Installs K8s| KUBELET2
+    KUBESPRAY -->|Installs Cilium| CILIUM_M
     
     API --> CILIUM_M
     CILIUM_M <-->|eBPF Datapath| CILIUM_W1
@@ -61,46 +65,6 @@ graph TB
     CILIUM_W1 --> HUBBLE
     CILIUM_W2 --> HUBBLE
     HUBBLE --> HUBBLE_UI
-    CILIUM_M --> PROM
-    PROM --> GRAF
-```
-
-
-### Network Topology
-
-```mermaid
-graph LR
-    subgraph "Host Network"
-        HOST[Host Machine<br/>NAT + Host-Only]
-    end
-    
-    subgraph "VM Network - 192.168.56.0/24"
-        MASTER[Master<br/>192.168.56.10<br/>4GB RAM, 2 CPU]
-        WORKER1[Worker-1<br/>192.168.56.11<br/>3GB RAM, 2 CPU]
-        WORKER2[Worker-2<br/>192.168.56.12<br/>3GB RAM, 2 CPU]
-    end
-    
-    subgraph "Pod Network - 10.244.0.0/16"
-        POD_CIDR1[Master Pods<br/>10.244.0.0/24]
-        POD_CIDR2[Worker-1 Pods<br/>10.244.1.0/24]
-        POD_CIDR3[Worker-2 Pods<br/>10.244.2.0/24]
-    end
-    
-    subgraph "Service Network - 10.96.0.0/12"
-        SVC[ClusterIP Services<br/>10.96.0.0/12]
-    end
-    
-    HOST -->|Host-Only Adapter| MASTER
-    HOST -->|Host-Only Adapter| WORKER1
-    HOST -->|Host-Only Adapter| WORKER2
-    
-    MASTER -->|Cilium CNI| POD_CIDR1
-    WORKER1 -->|Cilium CNI| POD_CIDR2
-    WORKER2 -->|Cilium CNI| POD_CIDR3
-    
-    POD_CIDR1 -.->|Service Discovery| SVC
-    POD_CIDR2 -.->|Service Discovery| SVC
-    POD_CIDR3 -.->|Service Discovery| SVC
 ```
 
 ### Deployment Sequence
@@ -109,85 +73,82 @@ graph LR
 sequenceDiagram
     participant User
     participant Vagrant
-    participant VirtualBox
+    participant Master
+    participant Worker1
+    participant Worker2
     participant Kubespray
-    participant Kubernetes
     participant Cilium
-    participant Hubble
     
     User->>Vagrant: vagrant up
-    Vagrant->>VirtualBox: Create VMs (master, worker-1, worker-2)
-    VirtualBox-->>Vagrant: VMs Ready
-    Vagrant->>VirtualBox: Configure Network (192.168.56.0/24)
-    Vagrant->>VirtualBox: Provision Base Packages
+    Vagrant->>Master: Create VM (Ubuntu 24.04)
+    Vagrant->>Worker1: Create VM (Ubuntu 24.04)
+    Vagrant->>Worker2: Create VM (Ubuntu 24.04)
+    Vagrant->>Master: Install base packages + Kubespray
+    Vagrant->>Worker1: Install base packages
+    Vagrant->>Worker2: Install base packages
     Vagrant-->>User: Infrastructure Ready
     
-    User->>Kubespray: ansible-playbook cluster.yml
-    Kubespray->>Kubernetes: Install Control Plane (master)
-    Kubespray->>Kubernetes: Install Worker Nodes
-    Kubespray->>Cilium: Deploy Cilium CNI (v1.16.5)
-    Cilium->>Kubernetes: Initialize eBPF Datapath
-    Cilium->>Cilium: Configure Network Policies
-    Kubernetes-->>Kubespray: Cluster Ready
-    Kubespray-->>User: Deployment Complete
+    User->>Master: SSH to master
+    Master->>Kubespray: ansible-playbook cluster.yml
+    Kubespray->>Master: Install Control Plane
+    Kubespray->>Worker1: Install kubelet + containerd
+    Kubespray->>Worker2: Install kubelet + containerd
+    Kubespray->>Cilium: Deploy Cilium 1.18.6
+    Cilium->>Master: Initialize eBPF Datapath
+    Cilium->>Worker1: Initialize eBPF Datapath
+    Cilium->>Worker2: Initialize eBPF Datapath
+    Kubespray-->>Master: Deployment Complete
     
-    User->>Cilium: Enable Hubble
-    Cilium->>Hubble: Deploy Hubble Relay
-    Cilium->>Hubble: Deploy Hubble UI
+    Master->>Cilium: Enable Hubble
+    Cilium->>Hubble: Deploy Hubble Relay + UI
     Hubble-->>User: Observability Ready
-    
-    User->>Kubernetes: Deploy Test Applications
-    Kubernetes->>Cilium: Apply Network Policies
-    Cilium->>Hubble: Stream Flow Data
-    Hubble-->>User: Monitoring Active
 ```
-
 
 ## Components and Interfaces
 
 ### Component 1: Infrastructure Layer (Vagrant + VirtualBox)
 
-**Purpose**: VM 프로비저닝 및 기본 네트워크 구성을 담당하는 인프라 계층
+**Purpose**: VM 프로비저닝 및 기본 환경 구성
 
 **Interface**:
 ```ruby
 # Vagrantfile API
 Vagrant.configure("2") do |config|
-  config.vm.box = "cloud-image/ubuntu-24.04"  # Ubuntu 24.04 LTS
+  config.vm.box = "bento/ubuntu-24.04"
   config.vm.network "private_network", ip: String
   config.vm.provider "virtualbox" do |vb|
     vb.memory = Integer
     vb.cpus = Integer
   end
-  config.vm.provision "shell", inline: String
+  config.vm.provision "shell", path: String
 end
 ```
 
 **Responsibilities**:
-- VM 생성 및 리소스 할당 (CPU, Memory, Disk)
-- 네트워크 인터페이스 구성 (Host-Only Adapter)
-- 기본 패키지 설치 (Docker, containerd, kubeadm 의존성)
-- SSH 키 배포 및 접근 권한 설정
-- 호스트명 및 /etc/hosts 파일 구성
+- Ubuntu 24.04 VM 생성 및 리소스 할당
+- 네트워크 인터페이스 구성 (192.168.56.0/24)
+- Master 노드에 Kubespray 설치 및 구성
+- 모든 노드에 기본 패키지 설치 (Python3, pip, SSH)
+- SSH 키 배포 및 passwordless 접근 설정
 
 **Configuration Parameters**:
 - Master Node: 192.168.56.10, 4GB RAM, 2 CPU
 - Worker Node 1: 192.168.56.11, 3GB RAM, 2 CPU
 - Worker Node 2: 192.168.56.12, 3GB RAM, 2 CPU
-- Network: 192.168.56.0/24 (Host-Only)
 
-### Component 2: Kubernetes Control Plane (Kubespray)
+### Component 2: Kubespray Deployment Engine
 
-**Purpose**: Kubernetes 클러스터 자동 배포 및 구성 관리
+**Purpose**: Master 노드에서 실행되어 전체 클러스터를 자동 배포
 
 **Interface**:
 ```yaml
-# Kubespray Inventory Interface
+# Kubespray Inventory
 all:
   hosts:
     master:
       ansible_host: 192.168.56.10
       ip: 192.168.56.10
+      ansible_connection: local
     worker-1:
       ansible_host: 192.168.56.11
       ip: 192.168.56.11
@@ -196,94 +157,80 @@ all:
       ip: 192.168.56.12
   children:
     kube_control_plane:
-      hosts: [master]
+      hosts: {master: null}
     kube_node:
-      hosts: [worker-1, worker-2]
+      hosts: {worker-1: null, worker-2: null}
     etcd:
-      hosts: [master]
+      hosts: {master: null}
 ```
 
 **Responsibilities**:
-- Kubernetes v1.35.1 바이너리 배포
-- etcd 클러스터 구성 (단일 노드)
-- kube-apiserver, kube-scheduler, kube-controller-manager 설치
-- kubelet 및 kube-proxy 구성
-- 인증서 생성 및 배포
+- Kubernetes 1.35.1 바이너리 다운로드 및 설치
+- containerd 컨테이너 런타임 구성
+- etcd 클러스터 초기화 (단일 노드)
+- Control Plane 컴포넌트 설치 (apiserver, scheduler, controller-manager)
+- Worker 노드 kubelet 구성 및 클러스터 조인
+- Cilium 1.18.6 CNI 플러그인 배포
 - kubeconfig 파일 생성
 
-**Key Configuration Files**:
-- `inventory/mycluster/hosts.yaml`: 노드 인벤토리
-- `inventory/mycluster/group_vars/k8s_cluster/k8s-cluster.yml`: 클러스터 설정
-- `inventory/mycluster/group_vars/k8s_cluster/addons.yml`: 애드온 설정
+**Key Configuration**:
+- `kube_network_plugin: cilium`
+- `kube_version: v1.35.1`
+- `container_manager: containerd`
+- `kube_pods_subnet: 10.244.0.0/16`
+- `kube_service_addresses: 10.96.0.0/12`
 
+### Component 3: Cilium CNI Plugin (v1.18.6)
 
-### Component 3: Cilium CNI Plugin
-
-**Purpose**: eBPF 기반 네트워킹, 보안, 관찰성을 제공하는 CNI 플러그인
+**Purpose**: eBPF 기반 네트워킹, 보안, 관찰성 제공
 
 **Interface**:
 ```yaml
-# Cilium Helm Values Interface
-apiVersion: v2
-kind: HelmChart
-metadata:
-  name: cilium
-  version: 1.16.5
+# Cilium Configuration
+apiVersion: cilium.io/v2
+kind: CiliumConfig
 spec:
-  values:
-    ipam:
-      mode: kubernetes
-    kubeProxyReplacement: true
-    k8sServiceHost: 192.168.56.10
-    k8sServicePort: 6443
-    hubble:
+  version: 1.18.6
+  ipam:
+    mode: kubernetes
+  kubeProxyReplacement: true
+  k8sServiceHost: 192.168.56.10
+  k8sServicePort: 6443
+  hubble:
+    enabled: true
+    relay:
       enabled: true
-      relay:
-        enabled: true
-      ui:
-        enabled: true
-    encryption:
+    ui:
       enabled: true
-      type: wireguard
+  bpf:
+    masquerade: true
 ```
 
 **Responsibilities**:
-- Pod 네트워크 인터페이스 생성 및 IP 할당
-- eBPF 프로그램을 통한 패킷 라우팅 및 필터링
-- Network Policy 적용 및 강제
-- L3/L4/L7 프로토콜 인식 및 처리
+- Pod 네트워크 인터페이스 생성 및 IP 할당 (10.244.0.0/16)
+- eBPF 프로그램을 통한 패킷 라우팅
 - Service Load Balancing (kube-proxy 대체)
-- WireGuard를 통한 노드 간 암호화
+- Network Policy 적용 및 강제
 - Hubble을 통한 네트워크 플로우 관찰
 
-**eBPF Programs**:
-- `bpf_lxc.o`: Container 네트워크 인터페이스 처리
-- `bpf_netdev.o`: 물리 네트워크 인터페이스 처리
-- `bpf_overlay.o`: VXLAN/Geneve 오버레이 처리
-- `bpf_host.o`: 호스트 네트워크 스택 처리
+**New Features in 1.18.6**:
+- 향상된 eBPF 성능 최적화
+- 개선된 IPv6 지원
+- 확장된 Hubble 메트릭
+- 더 나은 멀티 클러스터 지원
 
 ### Component 4: Hubble Observability Platform
 
-**Purpose**: 네트워크 플로우 관찰, 모니터링, 트러블슈팅
+**Purpose**: 네트워크 플로우 관찰 및 모니터링
 
 **Interface**:
 ```yaml
-# Hubble API Interface
-apiVersion: v1
-kind: Service
-metadata:
-  name: hubble-relay
-spec:
-  type: ClusterIP
-  ports:
-    - port: 80
-      targetPort: 4245
-      protocol: TCP
----
+# Hubble Service
 apiVersion: v1
 kind: Service
 metadata:
   name: hubble-ui
+  namespace: kube-system
 spec:
   type: NodePort
   ports:
@@ -293,70 +240,10 @@ spec:
 ```
 
 **Responsibilities**:
-- Cilium Agent로부터 네트워크 플로우 데이터 수집
-- gRPC API를 통한 플로우 데이터 제공
-- Web UI를 통한 시각화
-- Service Map 생성 및 표시
+- 네트워크 플로우 데이터 수집
+- Service Map 시각화
 - Network Policy 적용 상태 모니터링
-- DNS 쿼리 및 HTTP 요청 추적
-
-**Hubble CLI Commands**:
-```bash
-hubble observe --namespace default
-hubble observe --pod <pod-name>
-hubble observe --protocol http
-hubble observe --verdict DROPPED
-```
-
-
-### Component 5: Monitoring Stack (Prometheus + Grafana)
-
-**Purpose**: 클러스터 및 Cilium 메트릭 수집, 저장, 시각화
-
-**Interface**:
-```yaml
-# Prometheus ServiceMonitor Interface
-apiVersion: monitoring.coreos.com/v1
-kind: ServiceMonitor
-metadata:
-  name: cilium-agent
-spec:
-  selector:
-    matchLabels:
-      k8s-app: cilium
-  endpoints:
-    - port: prometheus
-      interval: 30s
----
-# Grafana Dashboard ConfigMap
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: cilium-dashboard
-data:
-  cilium-dashboard.json: |
-    {
-      "dashboard": {
-        "title": "Cilium Metrics",
-        "panels": [...]
-      }
-    }
-```
-
-**Responsibilities**:
-- Cilium Agent 메트릭 스크래핑
-- Hubble 메트릭 수집
-- Kubernetes 클러스터 메트릭 수집
-- 시계열 데이터 저장 (Prometheus TSDB)
-- Grafana 대시보드를 통한 시각화
-- 알림 규칙 평가 및 알림 발송
-
-**Key Metrics**:
-- `cilium_endpoint_count`: 관리되는 엔드포인트 수
-- `cilium_policy_count`: 적용된 Network Policy 수
-- `cilium_drop_count_total`: 드롭된 패킷 수
-- `cilium_forward_count_total`: 포워딩된 패킷 수
-- `hubble_flows_processed_total`: 처리된 플로우 수
+- DNS 및 HTTP 요청 추적
 
 ## Data Models
 
@@ -364,245 +251,316 @@ data:
 
 ```yaml
 VMConfig:
-  name: string                    # VM 이름 (master, worker-1, worker-2)
-  box: string                     # Vagrant box 이름 (cloud-image/ubuntu-24.04)
-  ip: string                      # IP 주소 (192.168.56.x)
-  memory: integer                 # RAM 크기 (MB)
+  name: string                    # VM 이름
+  box: string                     # bento/ubuntu-24.04
+  ip: string                      # 192.168.56.x
+  memory: integer                 # RAM (MB)
   cpus: integer                   # CPU 코어 수
-  hostname: string                # 호스트명
-  provision_script: string        # 프로비저닝 스크립트
+  provision_script: string        # 프로비저닝 스크립트 경로
 ```
-
-**Validation Rules**:
-- `ip` must be in 192.168.56.0/24 range
-- `memory` must be >= 2048 MB
-- `cpus` must be >= 2
-- `name` must be unique within cluster
 
 ### Kubernetes Cluster Model
 
 ```yaml
 K8sCluster:
-  version: string                 # Kubernetes 버전 (1.35.1)
-  cluster_name: string            # 클러스터 이름
-  kube_network_plugin: string     # CNI 플러그인 (cilium)
-  kube_pods_subnet: string        # Pod CIDR (10.244.0.0/16)
-  kube_service_addresses: string  # Service CIDR (10.96.0.0/12)
-  kube_apiserver_ip: string       # API Server IP (192.168.56.10)
-  kube_apiserver_port: integer    # API Server Port (6443)
-  container_manager: string       # 컨테이너 런타임 (containerd)
+  version: string                 # v1.35.1
+  cluster_name: string            # cluster.local
+  kube_network_plugin: string     # cilium
+  kube_pods_subnet: string        # 10.244.0.0/16
+  kube_service_addresses: string  # 10.96.0.0/12
+  container_manager: string       # containerd
+  kube_apiserver_ip: string       # 192.168.56.10
 ```
-
-**Validation Rules**:
-- `version` must match supported Kubespray version
-- `kube_pods_subnet` and `kube_service_addresses` must not overlap
-- `kube_apiserver_ip` must be reachable from all nodes
-- `container_manager` must be one of: docker, containerd, crio
-
 
 ### Cilium Configuration Model
 
 ```yaml
 CiliumConfig:
-  version: string                 # Cilium 버전 (1.16.5)
-  ipam_mode: string              # IPAM 모드 (kubernetes, cluster-pool)
-  kube_proxy_replacement: boolean # kube-proxy 대체 여부
-  tunnel_mode: string            # 터널 모드 (vxlan, geneve, disabled)
-  enable_ipv4: boolean           # IPv4 활성화
-  enable_ipv6: boolean           # IPv6 활성화
+  version: string                 # 1.18.6
+  ipam_mode: string              # kubernetes
+  kube_proxy_replacement: boolean # true
   hubble:
-    enabled: boolean             # Hubble 활성화
-    relay_enabled: boolean       # Hubble Relay 활성화
-    ui_enabled: boolean          # Hubble UI 활성화
-    metrics:
-      enabled: list[string]      # 활성화할 메트릭 목록
-  encryption:
-    enabled: boolean             # 암호화 활성화
-    type: string                 # 암호화 타입 (wireguard, ipsec)
-  ingress_controller:
-    enabled: boolean             # Ingress Controller 활성화
-    default: boolean             # 기본 Ingress Class 설정
+    enabled: boolean             # true
+    relay_enabled: boolean       # true
+    ui_enabled: boolean          # true
 ```
-
-**Validation Rules**:
-- `version` must be compatible with Kubernetes version
-- `ipam_mode` must be one of: kubernetes, cluster-pool, azure, eni, alibaba-cloud
-- `tunnel_mode` must be one of: vxlan, geneve, disabled
-- If `encryption.enabled` is true, `encryption.type` must be specified
-- If `hubble.ui_enabled` is true, `hubble.relay_enabled` must also be true
-
-### Network Policy Model
-
-```yaml
-NetworkPolicy:
-  apiVersion: cilium.io/v2
-  kind: CiliumNetworkPolicy
-  metadata:
-    name: string
-    namespace: string
-  spec:
-    endpointSelector:
-      matchLabels: map[string]string
-    ingress:
-      - fromEndpoints:
-          - matchLabels: map[string]string]
-        toPorts:
-          - ports:
-              - port: string
-                protocol: string
-            rules:
-              http:
-                - method: string
-                  path: string
-    egress:
-      - toEndpoints:
-          - matchLabels: map[string]string]
-        toPorts:
-          - ports:
-              - port: string
-                protocol: string
-```
-
-**Validation Rules**:
-- `endpointSelector` must specify at least one label
-- Port numbers must be in range 1-65535
-- Protocol must be one of: TCP, UDP, SCTP, ICMP, ICMPv6
-- HTTP rules require L7 protocol visibility enabled
-
 
 ## Algorithmic Pseudocode
 
 ### Main Deployment Algorithm
 
 ```pascal
-ALGORITHM deployClusterWithCilium(config)
-INPUT: config of type ClusterConfig
+ALGORITHM deployClusterFromMaster()
+INPUT: None (executed on master node)
 OUTPUT: result of type DeploymentResult
 
 PRECONDITIONS:
-  - VirtualBox is installed on host machine
-  - Vagrant is installed on host machine
-  - Host machine has at least 10GB free RAM
-  - Host machine has at least 50GB free disk space
-  - Network 192.168.56.0/24 is available
+  - Master node has Kubespray installed
+  - SSH keys are distributed to all nodes
+  - All nodes are running and accessible
+  - Network 192.168.56.0/24 is configured
 
 POSTCONDITIONS:
-  - All VMs are running and accessible
   - Kubernetes cluster is operational
-  - Cilium CNI is installed and functioning
-  - Hubble UI is accessible
   - All nodes are in Ready state
+  - Cilium CNI is functioning
+  - Hubble UI is accessible
 
 BEGIN
-  ASSERT validateHostRequirements() = true
+  // Phase 1: Prepare Kubespray Inventory
+  inventory ← generateInventory({
+    master: "192.168.56.10",
+    workers: ["192.168.56.11", "192.168.56.12"]
+  })
+  ASSERT inventoryValid(inventory) = true
   
-  // Phase 1: Infrastructure Provisioning
-  vmResult ← provisionVirtualMachines(config.vmConfig)
-  ASSERT vmResult.success = true AND allVMsRunning(vmResult.vms) = true
+  // Phase 2: Configure Cluster Parameters
+  clusterConfig ← {
+    kube_version: "v1.35.1",
+    kube_network_plugin: "cilium",
+    cilium_version: "1.18.6",
+    container_manager: "containerd"
+  }
+  writeConfig(clusterConfig)
   
-  // Phase 2: Kubernetes Deployment
-  k8sResult ← deployKubernetesCluster(config.k8sConfig, vmResult.vms)
-  ASSERT k8sResult.success = true AND clusterHealthy(k8sResult.cluster) = true
+  // Phase 3: Execute Kubespray Playbook
+  result ← executeAnsible("cluster.yml", inventory)
+  ASSERT result.success = true
   
-  // Phase 3: Cilium Installation
-  ciliumResult ← installCiliumCNI(config.ciliumConfig, k8sResult.cluster)
-  ASSERT ciliumResult.success = true AND ciliumHealthy() = true
+  // Phase 4: Verify Cluster Health
+  ASSERT allNodesReady() = true
+  ASSERT ciliumHealthy() = true
   
-  // Phase 4: Observability Setup
-  hubbleResult ← enableHubbleObservability(config.hubbleConfig)
-  ASSERT hubbleResult.success = true AND hubbleUIAccessible() = true
-  
-  // Phase 5: Monitoring Stack
-  monitoringResult ← deployMonitoringStack(config.monitoringConfig)
-  ASSERT monitoringResult.success = true
-  
-  // Phase 6: Validation
-  validationResult ← validateDeployment()
-  ASSERT validationResult.allTestsPassed = true
+  // Phase 5: Enable Hubble
+  enableHubble()
+  ASSERT hubbleUIAccessible() = true
   
   RETURN DeploymentResult{
     success: true,
-    cluster: k8sResult.cluster,
-    cilium: ciliumResult,
-    hubble: hubbleResult,
-    monitoring: monitoringResult
+    cluster_endpoint: "https://192.168.56.10:6443"
   }
 END
-
-LOOP INVARIANTS:
-  - All previously deployed components remain operational
-  - Network connectivity is maintained throughout deployment
-  - No resource conflicts occur between phases
 ```
 
-### VM Provisioning Algorithm
+### Kubespray Execution Algorithm
 
 ```pascal
-ALGORITHM provisionVirtualMachines(vmConfig)
-INPUT: vmConfig of type VMConfiguration
-OUTPUT: vmResult of type VMProvisioningResult
+ALGORITHM executeKubespray(inventory, config)
+INPUT: inventory of type InventoryFile, config of type ClusterConfig
+OUTPUT: result of type ExecutionResult
 
 PRECONDITIONS:
-  - Vagrantfile exists in project directory
-  - VirtualBox provider is available
-  - Network configuration is valid
+  - Ansible is installed on master node
+  - Inventory file is valid
+  - All target nodes are accessible via SSH
 
 POSTCONDITIONS:
-  - All VMs are created and running
-  - Network interfaces are configured
-  - SSH access is enabled
-  - Base packages are installed
+  - Kubernetes components are installed on all nodes
+  - Cilium CNI is deployed
+  - Cluster is operational
 
 BEGIN
-  vms ← []
+  // Step 1: Validate Prerequisites
+  ASSERT ansibleInstalled() = true
+  ASSERT allNodesReachable(inventory.hosts) = true
   
-  // Create Master Node
-  masterVM ← createVM({
-    name: "master",
-    ip: "192.168.56.10",
-    memory: 4096,
-    cpus: 2,
-    role: "control-plane"
-  })
-  ASSERT masterVM.state = "running"
-  vms.append(masterVM)
+  // Step 2: Run Cluster Playbook
+  cmd ← "ansible-playbook -i inventory/mycluster/hosts.yaml cluster.yml"
+  process ← execute(cmd)
   
-  // Create Worker Nodes
-  FOR i FROM 1 TO 2 DO
-    ASSERT allPreviousVMsHealthy(vms) = true
+  // Step 3: Monitor Execution
+  WHILE process.running DO
+    output ← process.readLine()
+    log(output)
     
-    workerVM ← createVM({
-      name: "worker-" + toString(i),
-      ip: "192.168.56.1" + toString(i),
-      memory: 3072,
-      cpus: 2,
-      role: "worker"
-    })
-    ASSERT workerVM.state = "running"
-    vms.append(workerVM)
-  END FOR
+    IF output.contains("FAILED") THEN
+      RETURN ExecutionResult{success: false, error: output}
+    END IF
+  END WHILE
   
-  // Configure Network and Provision
-  FOR each vm IN vms DO
-    configureNetwork(vm)
-    provisionBasePackages(vm)
-    setupSSHKeys(vm)
-    ASSERT vmReady(vm) = true
-  END FOR
+  // Step 4: Verify Installation
+  ASSERT kubeConfigExists() = true
+  ASSERT apiServerResponding() = true
   
-  // Verify Connectivity
-  ASSERT allVMsCanCommunicate(vms) = true
-  
-  RETURN VMProvisioningResult{
-    success: true,
-    vms: vms,
-    network: "192.168.56.0/24"
-  }
+  RETURN ExecutionResult{success: true}
 END
-
-LOOP INVARIANTS:
-  - All previously created VMs remain running
-  - Network configuration remains consistent
-  - No IP address conflicts exist
 ```
 
+## Key Functions with Formal Specifications
+
+### Function 1: provisionVMs()
+
+```pascal
+FUNCTION provisionVMs(vmConfigs: List[VMConfig]): ProvisionResult
+```
+
+**Preconditions:**
+- VirtualBox and Vagrant are installed
+- Host machine has sufficient resources (10GB RAM, 50GB disk)
+- Network 192.168.56.0/24 is available
+
+**Postconditions:**
+- All VMs are created and running
+- Network connectivity is established
+- SSH access is configured
+- Master node has Kubespray installed
+
+### Function 2: installKubesprayOnMaster()
+
+```pascal
+FUNCTION installKubesprayOnMaster(masterIP: String): InstallResult
+```
+
+**Preconditions:**
+- Master VM is running
+- Internet connectivity is available
+- Python3 and pip are installed
+
+**Postconditions:**
+- Kubespray repository is cloned
+- Python dependencies are installed
+- Inventory template is created
+- SSH keys are generated and distributed
+
+### Function 3: deployCluster()
+
+```pascal
+FUNCTION deployCluster(): DeploymentResult
+```
+
+**Preconditions:**
+- Kubespray is installed on master
+- Inventory file is configured
+- All nodes are accessible
+
+**Postconditions:**
+- Kubernetes 1.35.1 is installed
+- Cilium 1.18.6 is deployed
+- All nodes are joined to cluster
+- kubeconfig is available
+
+### Function 4: verifyCilium()
+
+```pascal
+FUNCTION verifyCilium(): VerificationResult
+```
+
+**Preconditions:**
+- Cilium is deployed
+- kubectl is configured
+
+**Postconditions:**
+- Cilium agents are running on all nodes
+- eBPF programs are loaded
+- Pod network is functional
+- Hubble is accessible
+
+## Example Usage
+
+```bash
+# Step 1: Provision VMs with Vagrant
+vagrant up
+
+# Step 2: SSH to master node
+vagrant ssh master
+
+# Step 3: Navigate to Kubespray directory
+cd kubespray
+
+# Step 4: Deploy cluster from master
+ansible-playbook -i inventory/mycluster/hosts.yaml cluster.yml
+
+# Step 5: Verify cluster
+kubectl get nodes
+kubectl get pods -A
+
+# Step 6: Access Hubble UI
+# Open browser: http://192.168.56.10:31234
+```
+
+## Error Handling
+
+### Error Scenario 1: Insufficient Host Resources
+
+**Condition**: Host machine has less than 10GB free RAM
+**Response**: Vagrant provisioning fails with clear error message
+**Recovery**: User must free up resources or reduce VM allocations
+
+### Error Scenario 2: Network Conflict
+
+**Condition**: Network 192.168.56.0/24 is already in use
+**Response**: VirtualBox network creation fails
+**Recovery**: User must change network configuration in Vagrantfile
+
+### Error Scenario 3: Kubespray Playbook Failure
+
+**Condition**: Ansible playbook encounters error during execution
+**Response**: Playbook stops and logs error details
+**Recovery**: User examines logs, fixes issue, and re-runs playbook
+
+### Error Scenario 4: Cilium Installation Failure
+
+**Condition**: Cilium pods fail to start
+**Response**: Deployment reports unhealthy status
+**Recovery**: Check Cilium logs, verify network configuration, re-deploy if needed
+
+## Testing Strategy
+
+### Unit Testing Approach
+
+- Test VM provisioning scripts independently
+- Test inventory generation logic
+- Test configuration file validation
+- Mock Ansible execution for testing
+
+### Integration Testing Approach
+
+- Test complete deployment flow from start to finish
+- Verify inter-node communication
+- Test pod-to-pod connectivity across nodes
+- Verify Cilium network policies
+- Test Hubble data collection
+
+### Validation Tests
+
+- All nodes reach Ready state within 10 minutes
+- All system pods reach Running state
+- Test pod can be created and receives IP
+- DNS resolution works within cluster
+- Hubble UI is accessible via NodePort
+
+## Performance Considerations
+
+- VM provisioning: ~5 minutes for all 3 VMs
+- Kubespray deployment: ~15-20 minutes
+- Cilium initialization: ~2-3 minutes
+- Total deployment time: ~25-30 minutes
+
+## Security Considerations
+
+- SSH key-based authentication only (no passwords)
+- Private network isolation (192.168.56.0/24)
+- Kubernetes RBAC enabled by default
+- Cilium Network Policies for pod-level security
+- etcd data encryption at rest (optional)
+
+## Dependencies
+
+- Host Machine: VirtualBox 7.0+, Vagrant 2.3+
+- Guest OS: Ubuntu 24.04 LTS
+- Kubernetes: v1.35.1
+- Cilium: v1.18.6
+- Kubespray: Latest stable release supporting K8s 1.35.1
+- Container Runtime: containerd 1.7+
+- Python: 3.10+ (for Ansible)
+- Ansible: 2.14+ (installed via Kubespray)
+
+## Correctness Properties
+
+1. **Cluster Completeness**: ∀ node ∈ {master, worker-1, worker-2}, nodeStatus(node) = "Ready"
+2. **Network Connectivity**: ∀ pod1, pod2 ∈ cluster, canCommunicate(pod1, pod2) = true
+3. **IP Allocation**: ∀ pod ∈ cluster, pod.ip ∈ 10.244.0.0/16
+4. **Service Discovery**: ∀ service ∈ cluster, dnsResolves(service.name) = true
+5. **Cilium Health**: ciliumStatus() = "OK" ∧ ∀ node ∈ cluster, ciliumAgentRunning(node) = true
+6. **Hubble Accessibility**: httpGet("http://192.168.56.10:31234").status = 200
+7. **Deployment Idempotency**: deploy() ∧ deploy() ≡ deploy()
